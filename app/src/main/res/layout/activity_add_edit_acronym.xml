@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- activity_add_edit_acronym.xml -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="12dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <EditText
+            android:id="@+id/inputShort"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Short (e.g., API)" />
+
+        <EditText
+            android:id="@+id/inputFull"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Full meaning" />
+
+        <EditText
+            android:id="@+id/inputCategory"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Category (Programming, Networking, Web, etc.)" />
+
+        <EditText
+            android:id="@+id/inputExplanation"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Short explanation" />
+
+        <EditText
+            android:id="@+id/inputExample"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Example usage" />
+
+        <Button
+            android:id="@+id/btnSave"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Save" />
+
+    </LinearLayout>
+
+</ScrollView>
