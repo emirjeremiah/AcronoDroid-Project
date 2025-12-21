@@ -3,6 +3,7 @@ package com.example.acronodroid
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
+import android.widget.ImageButton
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -23,6 +24,7 @@ class AcronymDetailActivity : AppCompatActivity() {
     private lateinit var tvExample: TextView
     private lateinit var btnEdit: Button
     private lateinit var btnDelete: Button
+    private lateinit var btnBack: ImageButton
 
     private val dbFirestore = FirebaseFirestore.getInstance()
     private val auth by lazy { FirebaseAuth.getInstance() }
@@ -40,10 +42,15 @@ class AcronymDetailActivity : AppCompatActivity() {
         tvExample = findViewById(R.id.tvExample)
         btnEdit = findViewById(R.id.btnEdit)
         btnDelete = findViewById(R.id.btnDelete)
+        btnBack = findViewById(R.id.btnBack)
 
         localDb = AppDatabase.getDatabase(this)
 
-        // get data from intent (we passed fields)
+        btnBack.setOnClickListener {
+            finish()
+        }
+
+        // Get data from intent
         val id = intent.getStringExtra("acronym_id") ?: UUID.randomUUID().toString()
         val short = intent.getStringExtra("acronym_short") ?: ""
         val full = intent.getStringExtra("acronym_full") ?: ""
@@ -52,7 +59,15 @@ class AcronymDetailActivity : AppCompatActivity() {
         val cat = intent.getStringExtra("acronym_cat") ?: ""
         val author = intent.getStringExtra("acronym_author")
 
-        currentAcronym = Acronym(id = id, short = short, full = full, explanation = expl, example = example, category = cat, authorUid = author)
+        currentAcronym = Acronym(
+            id = id,
+            short = short,
+            full = full,
+            explanation = expl,
+            example = example,
+            category = cat,
+            authorUid = author
+        )
 
         showData()
 
@@ -70,12 +85,12 @@ class AcronymDetailActivity : AppCompatActivity() {
 
         btnDelete.setOnClickListener {
             AlertDialog.Builder(this)
-                .setTitle("Delete?")
-                .setMessage("Are you sure you want to delete this acronym?")
-                .setPositiveButton("Yes") { _, _ ->
+                .setTitle("Delete Acronym?")
+                .setMessage("Are you sure you want to delete this acronym? This action cannot be undone.")
+                .setPositiveButton("Yes, Delete") { _, _ ->
                     deleteAcronym()
                 }
-                .setNegativeButton("No", null)
+                .setNegativeButton("Cancel", null)
                 .show()
         }
     }
@@ -90,33 +105,24 @@ class AcronymDetailActivity : AppCompatActivity() {
 
     private fun deleteAcronym() {
         lifecycleScope.launch {
-            // If it's local-only, delete from Room; otherwise remove from Firestore and from Room if duplicate
             if (currentAcronym.isLocalOnly || currentAcronym.authorUid == null) {
-                // local only
+                // Local only
                 localDb.acronymDao().delete(currentAcronym)
                 finish()
             } else {
-                // Delete from Firestore (user-created)
+                // Delete from Firestore
                 dbFirestore.collection("acronyms").document(currentAcronym.id)
                     .delete()
                     .addOnSuccessListener {
-                        // attempt to remove from local DB copy (if it exists)
                         lifecycleScope.launch {
                             localDb.acronymDao().delete(currentAcronym)
                         }
                         finish()
                     }
                     .addOnFailureListener {
-                        // show error
                         finish()
                     }
             }
         }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        // refresh in case of edit
-        // For brevity: we simply finish and go back to library to refresh via lifecycle observers
     }
 }

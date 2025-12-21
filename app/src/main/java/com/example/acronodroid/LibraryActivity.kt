@@ -4,19 +4,23 @@ import android.content.Intent
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
-import android.widget.Button
+import android.view.View
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
 import android.widget.EditText
 import android.widget.ImageButton
+import android.widget.Spinner
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.example.acronodroid.adapters.AcronymAdapter
 import com.example.acronodroid.db.AppDatabase
 import com.example.acronodroid.models.Acronym
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import androidx.recyclerview.widget.RecyclerView
 
 class LibraryActivity : AppCompatActivity() {
 
@@ -24,6 +28,8 @@ class LibraryActivity : AppCompatActivity() {
     private lateinit var adapter: AcronymAdapter
     private lateinit var rv: RecyclerView
     private val auth by lazy { FirebaseAuth.getInstance() }
+    private var allAcronyms = listOf<Acronym>()
+    private var currentCategory = "All Categories"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -34,12 +40,12 @@ class LibraryActivity : AppCompatActivity() {
         rv = findViewById(R.id.rvAcronyms)
         val searchInput = findViewById<EditText>(R.id.searchInput)
         val addBtn = findViewById<ImageButton>(R.id.btnAdd)
-        val profileBtn = findViewById<Button>(R.id.btnProfile)
+        val fabProfile = findViewById<FloatingActionButton>(R.id.fabProfile)
+        val spinnerCategory = findViewById<Spinner>(R.id.spinnerCategory)
 
         adapter = AcronymAdapter(emptyList()) { acronym ->
             val i = Intent(this, AcronymDetailActivity::class.java)
             i.putExtra("acronym_id", acronym.id)
-            // pass source flag to indicate local vs remote
             i.putExtra("acronym_short", acronym.short)
             i.putExtra("acronym_full", acronym.full)
             i.putExtra("acronym_expl", acronym.explanation)
@@ -51,22 +57,43 @@ class LibraryActivity : AppCompatActivity() {
         rv.layoutManager = LinearLayoutManager(this)
         rv.adapter = adapter
 
-        // Observes all acronyms initially
+        // Setup category spinner
+        val categories = mutableListOf("All Categories")
         lifecycleScope.launch {
             db.acronymDao().getAll().collectLatest { list ->
-                adapter.update(list)
+                allAcronyms = list
+
+                // Extract unique categories
+                val uniqueCategories = list.map { it.category }.distinct().sorted()
+                categories.clear()
+                categories.add("All Categories")
+                categories.addAll(uniqueCategories)
+
+                val spinnerAdapter = ArrayAdapter(
+                    this@LibraryActivity,
+                    android.R.layout.simple_spinner_item,
+                    categories
+                )
+                spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+                spinnerCategory.adapter = spinnerAdapter
+
+                filterAcronyms()
             }
         }
 
-        // Instant search (local DB only)
+        spinnerCategory.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                currentCategory = categories[position]
+                filterAcronyms()
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+
+        // Instant search
         searchInput.addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {
-                val q = "%${s.toString().trim()}%"
-                lifecycleScope.launch {
-                    db.acronymDao().search(q).collectLatest { list ->
-                        adapter.update(list)
-                    }
-                }
+                filterAcronyms(s.toString())
             }
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
@@ -76,17 +103,48 @@ class LibraryActivity : AppCompatActivity() {
             startActivity(Intent(this, AddEditAcronymActivity::class.java))
         }
 
-        profileBtn.setOnClickListener {
+        fabProfile.setOnClickListener {
             startActivity(Intent(this, ProfileActivity::class.java))
         }
+    }
+
+    private fun filterAcronyms(searchQuery: String = "") {
+        var filtered = allAcronyms
+
+        // Filter by category
+        if (currentCategory != "All Categories") {
+            filtered = filtered.filter { it.category == currentCategory }
+        }
+
+        // Filter by search query
+        if (searchQuery.isNotEmpty()) {
+            val query = searchQuery.lowercase()
+            filtered = filtered.filter {
+                it.short.lowercase().contains(query) ||
+                        it.full.lowercase().contains(query) ||
+                        it.explanation.lowercase().contains(query)
+            }
+        }
+
+        adapter.update(filtered)
     }
 
     override fun onStart() {
         super.onStart()
         if (auth.currentUser == null) {
-            // redirect to login
             startActivity(Intent(this, LoginActivity::class.java))
             finish()
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Refresh data when returning to this screen
+        lifecycleScope.launch {
+            db.acronymDao().getAll().collectLatest { list ->
+                allAcronyms = list
+                filterAcronyms()
+            }
         }
     }
 }

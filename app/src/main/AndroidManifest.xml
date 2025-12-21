@@ -20,16 +20,23 @@
             android:theme="@style/AppTheme">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".LibraryActivity" />
-        <activity android:name=".AcronymDetailActivity" />
-        <activity android:name=".AddEditAcronymActivity" />
-        <activity android:name=".ProfileActivity" />
-        <activity android:name=".LoginActivity" />
-        <activity android:name=".RegisterActivity" />
+        <activity android:name=".WelcomeActivity"
+            android:theme="@style/AppTheme" />
+        <activity android:name=".LoginActivity"
+            android:theme="@style/AppTheme" />
+        <activity android:name=".RegisterActivity"
+            android:theme="@style/AppTheme" />
+        <activity android:name=".LibraryActivity"
+            android:theme="@style/AppTheme" />
+        <activity android:name=".AcronymDetailActivity"
+            android:theme="@style/AppTheme" />
+        <activity android:name=".AddEditAcronymActivity"
+            android:theme="@style/AppTheme" />
+        <activity android:name=".ProfileActivity"
+            android:theme="@style/AppTheme" />
     </application>
 
 </manifest>
